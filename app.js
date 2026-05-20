@@ -40,7 +40,7 @@ let pendingSessionPayload = null;
 async function boot() {
   let config;
   try {
-    const res = await fetch('./config.json');
+    const res = await fetch('./config.json', { cache: 'no-store' });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     config = await res.json();
   } catch (err) {
