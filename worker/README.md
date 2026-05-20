@@ -18,7 +18,7 @@ wrangler login
 
 ### 2. Set the GitHub token secret
 
-Create a fine-grained GitHub PAT scoped to `davetriska02-collab/medicus-suite` with **Issues: Read & Write** permission only. Then run:
+Create a fine-grained GitHub PAT scoped to `davetriska02-collab/circle-of-death-tracker` with **Issues: Read & Write** permission only. Then run:
 
 ```bash
 wrangler secret put GITHUB_TOKEN
@@ -42,7 +42,7 @@ https://it-slowness-proxy.YOURNAME.workers.dev
 
 ### 4. Wire up the frontend
 
-Copy that URL into `it-slowness-tracker/config.json` as the value of `workerUrl`:
+Copy that URL into `config.json` as the value of `workerUrl`:
 
 ```json
 {
