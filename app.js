@@ -641,10 +641,17 @@ async function handleSubmit() {
   const status = document.getElementById('submit-status');
   status.hidden = false;
   status.className = 'submit-status';
-  status.textContent = 'Sending…';
+
+  const submitStart = Date.now();
+  status.textContent = 'Sending… 0s';
+  const sendTimerId = setInterval(() => {
+    const elapsed = Math.round((Date.now() - submitStart) / 1000);
+    status.textContent = `Sending… ${elapsed}s`;
+  }, 1000);
 
   try {
     const result = await submit(payload, state.config);
+    clearInterval(sendTimerId);
 
     if (result.ok) {
       clearDraft();
@@ -663,6 +670,7 @@ async function handleSubmit() {
       btn.textContent = 'Retry';
     }
   } catch (err) {
+    clearInterval(sendTimerId);
     status.className = 'submit-status error';
     status.textContent = `Error: ${err.message}`;
     btn.disabled = false;
