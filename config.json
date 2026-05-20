@@ -1,7 +1,7 @@
 {
   "appVersion": "0.1.0",
   "storageMode": "worker",
-  "workerUrl": "https://it-slowness-proxy.CHANGEME.workers.dev/submit",
+  "workerUrl": "https://it-slowness-proxy.davetriska02.workers.dev/submit",
   "fallbackRepo": "davetriska02-collab/circle-of-death-tracker",
   "sites": [
     { "id": "cranleigh", "label": "Cranleigh Surgery" },
