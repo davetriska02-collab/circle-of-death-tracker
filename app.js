@@ -4,13 +4,10 @@ const DRAFT_KEY        = 'itslowness.draft';
 const LAST_SITE_KEY    = 'itslowness.lastSite';
 const LAST_ROLE_KEY    = 'itslowness.lastRole';
 const LAST_SESSION_KEY = 'itslowness.lastSessionType';
-const LAST_NAME_KEY    = 'itslowness.name';
-
 const state = {
   config: null,
   screen: 'setup',
   session: {
-    name: '',
     sessionType: '',
     sessionTypeLabel: '',
     role: '',
@@ -110,8 +107,6 @@ function restoreLastSelections() {
   trySetSelect('sel-site', localStorage.getItem(LAST_SITE_KEY));
   trySetSelect('sel-role', localStorage.getItem(LAST_ROLE_KEY));
   trySetSelect('sel-session-type', localStorage.getItem(LAST_SESSION_KEY));
-  const savedName = localStorage.getItem(LAST_NAME_KEY);
-  if (savedName) document.getElementById('inp-name').value = savedName;
 }
 
 function trySetSelect(id, value) {
@@ -230,7 +225,6 @@ function bindEvents() {
     state.incidents = [];
     state.narrative = '';
     state.session = {
-      name: '',
       sessionType: '',
       sessionTypeLabel: '',
       role: '',
@@ -291,11 +285,8 @@ function startSession() {
   state.session.roleLabel    = roleEl.options[roleEl.selectedIndex].text;
   state.session.sessionType  = typeEl.value;
   state.session.sessionTypeLabel = typeEl.options[typeEl.selectedIndex].text;
-  state.session.name         = document.getElementById('inp-name').value.trim();
   state.session.startedAt    = new Date().toISOString();
   state.session.testRun      = document.getElementById('chk-test-run').checked;
-
-  if (state.session.name) localStorage.setItem(LAST_NAME_KEY, state.session.name);
 
   state.incidents = [];
   state.narrative = '';
@@ -313,16 +304,9 @@ function startSession() {
 }
 
 function renderInfoChip() {
-  const { name, sessionTypeLabel, roleLabel, siteLabel, testRun } = state.session;
+  const { sessionTypeLabel, roleLabel, siteLabel, testRun } = state.session;
   const chip = document.getElementById('info-chip');
-  chip.textContent = '';
-  if (name) {
-    const nameEl = document.createElement('strong');
-    nameEl.textContent = name + ' — ';
-    nameEl.style.color = 'var(--text-1)';
-    chip.appendChild(nameEl);
-  }
-  chip.appendChild(document.createTextNode(`${sessionTypeLabel} · ${roleLabel} · ${siteLabel}`));
+  chip.textContent = `${sessionTypeLabel} · ${roleLabel} · ${siteLabel}`;
   if (testRun) {
     const badge = document.createElement('span');
     badge.className = 'test-chip';
@@ -704,7 +688,6 @@ function buildSessionPayload() {
       (now.getTime() - new Date(state.session.startedAt).getTime()) / 1000
     ),
     testRun: state.session.testRun || false,
-    submittedBy: state.session.name || undefined,
     incidentCount: state.incidents.length,
     totalLostSeconds: state.incidents.reduce((s, i) => s + i.durationSeconds, 0),
     narrative: state.narrative,
