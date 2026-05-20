@@ -1,0 +1,23 @@
+{
+  "appVersion": "0.1.0",
+  "storageMode": "worker",
+  "workerUrl": "https://it-slowness-proxy.CHANGEME.workers.dev/submit",
+  "fallbackRepo": "davetriska02-collab/circle-of-death-tracker",
+  "sites": [
+    { "id": "cranleigh", "label": "Cranleigh Surgery" },
+    { "id": "guildowns", "label": "Guildowns Group Practice" }
+  ],
+  "roles": [
+    { "id": "gp",          "label": "GP" },
+    { "id": "nurse",       "label": "Nurse" },
+    { "id": "hca",         "label": "HCA" },
+    { "id": "receptionist","label": "Receptionist" },
+    { "id": "admin",       "label": "Admin" },
+    { "id": "other",       "label": "Other" }
+  ],
+  "sessionTypes": [
+    { "id": "duty",   "label": "Duty" },
+    { "id": "normal", "label": "Normal Work" },
+    { "id": "admin",  "label": "Admin" }
+  ]
+}
