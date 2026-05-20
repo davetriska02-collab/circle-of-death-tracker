@@ -130,6 +130,14 @@ body[data-screen="submit"] #screen-active {
   letter-spacing: 0.04em;
 }
 
+.optional-label {
+  font-size: 0.72rem;
+  color: var(--text-4);
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
 select,
 textarea,
 input:not([type="checkbox"]) {
@@ -332,20 +340,45 @@ textarea {
 .stats-row {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
-  padding: 0.5rem 0.85rem;
-  background: var(--bg-mid);
-  border-radius: 8px;
+  gap: 0;
+  padding: 0.875rem 1rem;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 12px;
 }
 
-.stat {
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: var(--text-2);
+.stat-block {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
 }
 
-.stat-sep {
+.stat-divider {
+  width: 1px;
+  height: 2.5rem;
+  background: var(--border-hi);
+  flex-shrink: 0;
+}
+
+.stat-num {
+  font-size: 1.9rem;
+  font-weight: 700;
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-1);
+  line-height: 1;
+}
+
+.stat-num--red { color: var(--red); }
+
+.stat-lbl {
+  font-size: 0.7rem;
   color: var(--text-4);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  font-weight: 600;
 }
 
 /* ─── Timer button ───────────────────────────────────────────────────── */
@@ -469,6 +502,7 @@ textarea {
 .incident-list li {
   background: var(--bg-elev);
   border: 1px solid var(--border);
+  border-left: 3px solid var(--red);
   border-radius: 10px;
   padding: 0.75rem 1rem;
   display: flex;
@@ -479,6 +513,22 @@ textarea {
 
 .incident-list li:hover {
   border-color: var(--border-hi);
+  border-left-color: var(--red);
+}
+
+.btn-delete-incident {
+  color: var(--text-4);
+  border-color: transparent;
+  font-size: 1rem;
+  line-height: 1;
+  padding: 0.15rem 0.4rem;
+  flex-shrink: 0;
+}
+
+.btn-delete-incident:hover:not(:disabled) {
+  color: var(--red);
+  background: color-mix(in srgb, var(--red) 12%, transparent);
+  border-color: transparent;
 }
 
 .incident-meta {
@@ -531,6 +581,25 @@ textarea {
 #btn-end-session {
   width: 100%;
   max-width: 320px;
+  position: relative;
+  overflow: hidden;
+}
+
+#btn-end-session::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.28);
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: none;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+#btn-end-session.holding::before {
+  transform: scaleX(1);
+  transition: transform 2s linear;
 }
 
 .hold-hint {

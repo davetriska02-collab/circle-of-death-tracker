@@ -408,6 +408,12 @@
     }
 
     .sessions-error { color: var(--red); font-size: 0.875rem; }
+
+    .session-name {
+      font-size: 0.875rem;
+      color: var(--accent);
+      font-weight: 700;
+    }
   </style>
 </head>
 <body>
@@ -835,10 +841,15 @@
           var item = document.createElement('div');
           item.className = 'session-item' + (isTest ? ' session-item--test' : '');
 
+          var nameHtml = (session && session.submittedBy)
+            ? '<span class="session-name">' + escHtml2(session.submittedBy) + '</span>'
+            : '';
+
           var metaHtml =
             '<div class="session-meta">' +
               '<span class="session-date">' + escHtml2(date) + '</span>' +
               (isTest ? '<span class="session-test-badge">TEST</span>' : '') +
+              nameHtml +
               '<span class="session-who">' +
                 escHtml2(site) + ' &middot; ' + escHtml2(role) + ' &middot; ' + escHtml2(type) +
               '</span>' +

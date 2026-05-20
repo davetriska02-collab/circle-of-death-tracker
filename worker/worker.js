@@ -93,6 +93,12 @@ async function handleSubmit(request, env) {
     return jsonResponse({ error: 'Invalid session.narrative' }, 400);
   }
 
+  if (session.submittedBy !== undefined) {
+    if (typeof session.submittedBy !== 'string' || session.submittedBy.length > 60) {
+      return jsonResponse({ error: 'Invalid session.submittedBy' }, 400);
+    }
+  }
+
   for (const [key, value] of Object.entries(session)) {
     if (containsPII(value)) {
       return jsonResponse({ error: 'PII detected — do not include patient identifiers' }, 422);
@@ -102,7 +108,8 @@ async function handleSubmit(request, env) {
   const dateStr = session.startedAt.slice(0, 10);
   const incidentCount = session.incidentCount ?? session.incidents.length;
   const lostSeconds = session.totalLostSeconds ?? 0;
-  const title = `session ${dateStr} ${session.site} ${session.role} ${session.sessionType} (${incidentCount} incidents, ${formatDuration(lostSeconds)} lost)`;
+  const byLine = session.submittedBy ? ` [${session.submittedBy}]` : '';
+  const title = `session${byLine} ${dateStr} ${session.site} ${session.role} ${session.sessionType} (${incidentCount} incidents, ${formatDuration(lostSeconds)} lost)`;
   const body = '```json\n' + JSON.stringify(session, null, 2) + '\n```';
   const labels = [
     'session',

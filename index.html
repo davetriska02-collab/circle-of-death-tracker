@@ -26,6 +26,12 @@
 
       <form id="form-setup" class="setup-form" novalidate>
         <div class="field-group">
+          <label for="inp-name">Your name <span class="optional-label">(optional)</span></label>
+          <input type="text" id="inp-name" maxlength="60" placeholder="e.g. Dr Smith"
+            autocomplete="name" spellcheck="false">
+        </div>
+
+        <div class="field-group">
           <label for="sel-site">Site</label>
           <select id="sel-site" required>
             <option value="">— Select site —</option>
@@ -77,9 +83,15 @@
       </div>
 
       <div class="stats-row">
-        <span id="stat-incidents" class="stat">0 incidents</span>
-        <span class="stat-sep">·</span>
-        <span id="stat-total-lost" class="stat">0s lost</span>
+        <div class="stat-block">
+          <span class="stat-num" id="stat-incidents">0</span>
+          <span class="stat-lbl">incidents</span>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-block">
+          <span class="stat-num stat-num--red" id="stat-total-lost">0s</span>
+          <span class="stat-lbl">lost</span>
+        </div>
       </div>
 
       <div class="timer-area">

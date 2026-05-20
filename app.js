@@ -4,11 +4,13 @@ const DRAFT_KEY        = 'itslowness.draft';
 const LAST_SITE_KEY    = 'itslowness.lastSite';
 const LAST_ROLE_KEY    = 'itslowness.lastRole';
 const LAST_SESSION_KEY = 'itslowness.lastSessionType';
+const LAST_NAME_KEY    = 'itslowness.name';
 
 const state = {
   config: null,
   screen: 'setup',
   session: {
+    name: '',
     sessionType: '',
     sessionTypeLabel: '',
     role: '',
@@ -30,7 +32,6 @@ const state = {
 let rafId = null;
 let heartbeatId = null;
 let holdTimerId = null;
-let holdProgressId = null;
 let activeNoteIndex = null;
 let pendingSessionPayload = null;
 
@@ -109,6 +110,8 @@ function restoreLastSelections() {
   trySetSelect('sel-site', localStorage.getItem(LAST_SITE_KEY));
   trySetSelect('sel-role', localStorage.getItem(LAST_ROLE_KEY));
   trySetSelect('sel-session-type', localStorage.getItem(LAST_SESSION_KEY));
+  const savedName = localStorage.getItem(LAST_NAME_KEY);
+  if (savedName) document.getElementById('inp-name').value = savedName;
 }
 
 function trySetSelect(id, value) {
@@ -227,6 +230,7 @@ function bindEvents() {
     state.incidents = [];
     state.narrative = '';
     state.session = {
+      name: '',
       sessionType: '',
       sessionTypeLabel: '',
       role: '',
@@ -287,8 +291,11 @@ function startSession() {
   state.session.roleLabel    = roleEl.options[roleEl.selectedIndex].text;
   state.session.sessionType  = typeEl.value;
   state.session.sessionTypeLabel = typeEl.options[typeEl.selectedIndex].text;
+  state.session.name         = document.getElementById('inp-name').value.trim();
   state.session.startedAt    = new Date().toISOString();
   state.session.testRun      = document.getElementById('chk-test-run').checked;
+
+  if (state.session.name) localStorage.setItem(LAST_NAME_KEY, state.session.name);
 
   state.incidents = [];
   state.narrative = '';
@@ -306,9 +313,16 @@ function startSession() {
 }
 
 function renderInfoChip() {
-  const { sessionTypeLabel, roleLabel, siteLabel, testRun } = state.session;
+  const { name, sessionTypeLabel, roleLabel, siteLabel, testRun } = state.session;
   const chip = document.getElementById('info-chip');
-  chip.textContent = `${sessionTypeLabel} · ${roleLabel} · ${siteLabel}`;
+  chip.textContent = '';
+  if (name) {
+    const nameEl = document.createElement('strong');
+    nameEl.textContent = name + ' — ';
+    nameEl.style.color = 'var(--text-1)';
+    chip.appendChild(nameEl);
+  }
+  chip.appendChild(document.createTextNode(`${sessionTypeLabel} · ${roleLabel} · ${siteLabel}`));
   if (testRun) {
     const badge = document.createElement('span');
     badge.className = 'test-chip';
@@ -406,13 +420,12 @@ function updateStats() {
   const count = state.incidents.length;
   const total = state.incidents.reduce((s, i) => s + i.durationSeconds, 0);
 
-  document.getElementById('stat-incidents').textContent =
-    `${count} incident${count === 1 ? '' : 's'}`;
+  document.getElementById('stat-incidents').textContent = String(count);
 
   document.getElementById('stat-total-lost').textContent =
     total >= 60
-      ? `${Math.floor(total / 60)}m ${total % 60}s lost`
-      : `${total}s lost`;
+      ? `${Math.floor(total / 60)}m ${total % 60}s`
+      : `${total}s`;
 }
 
 // ─── Incident list ───────────────────────────────────────────────────────────
@@ -450,10 +463,24 @@ function renderIncidentList() {
     noteBtn.textContent = incident.note ? 'Edit note' : 'Add note';
     noteBtn.addEventListener('click', () => openNoteDialog(originalIdx));
 
+    const deleteBtn = document.createElement('button');
+    deleteBtn.className = 'btn btn-ghost btn-small btn-delete-incident';
+    deleteBtn.setAttribute('aria-label', 'Remove incident');
+    deleteBtn.textContent = '✕';
+    deleteBtn.addEventListener('click', () => {
+      document.getElementById('note-dialog').close();
+      activeNoteIndex = null;
+      state.incidents.splice(originalIdx, 1);
+      state.incidents.forEach((inc, i) => { inc.id = i + 1; });
+      renderIncidentList();
+      updateStats();
+    });
+
     meta.appendChild(label);
     meta.appendChild(dur);
     meta.appendChild(time);
     meta.appendChild(noteBtn);
+    meta.appendChild(deleteBtn);
     li.appendChild(meta);
 
     if (incident.note) {
@@ -544,21 +571,11 @@ function handleKeydown(e) {
 function onEndSessionPointerDown(e) {
   const btn = document.getElementById('btn-end-session');
   btn.setPointerCapture(e.pointerId);
-
-  let pct = 0;
-  holdProgressId = setInterval(() => {
-    pct += 5;
-    btn.textContent = `Hold… ${pct}%`;
-    if (pct >= 100) {
-      clearInterval(holdProgressId);
-      holdProgressId = null;
-    }
-  }, 100);
+  btn.classList.add('holding');
 
   holdTimerId = setTimeout(() => {
-    clearInterval(holdProgressId);
-    holdProgressId = null;
     holdTimerId = null;
+    btn.classList.remove('holding');
     endSession();
   }, 2000);
 }
@@ -568,12 +585,7 @@ function onEndSessionPointerUp() {
     clearTimeout(holdTimerId);
     holdTimerId = null;
   }
-  if (holdProgressId) {
-    clearInterval(holdProgressId);
-    holdProgressId = null;
-  }
-  const btn = document.getElementById('btn-end-session');
-  btn.textContent = 'End Session';
+  document.getElementById('btn-end-session').classList.remove('holding');
 }
 
 function endSession() {
@@ -692,6 +704,7 @@ function buildSessionPayload() {
       (now.getTime() - new Date(state.session.startedAt).getTime()) / 1000
     ),
     testRun: state.session.testRun || false,
+    submittedBy: state.session.name || undefined,
     incidentCount: state.incidents.length,
     totalLostSeconds: state.incidents.reduce((s, i) => s + i.durationSeconds, 0),
     narrative: state.narrative,
