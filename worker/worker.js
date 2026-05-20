@@ -110,6 +110,7 @@ async function handleSubmit(request, env) {
     'role:' + session.role,
     'sessiontype:' + session.sessionType,
   ];
+  if (session.testRun === true) labels.push('test');
 
   const githubHeaders = {
     Authorization: `Bearer ${env.GITHUB_TOKEN}`,

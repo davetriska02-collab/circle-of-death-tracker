@@ -287,6 +287,127 @@
       font-size: 0.8125rem;
       margin-top: 1rem;
     }
+
+    /* ── Sessions viewer ── */
+    .sessions-toolbar {
+      display: flex;
+      gap: 0.75rem;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-bottom: 1.25rem;
+    }
+
+    .sessions-toolbar .spacer { flex: 1; }
+
+    .chk-label {
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+      cursor: pointer;
+      color: var(--text-3);
+      font-size: 0.875rem;
+    }
+    .chk-label:hover { color: var(--text-2); }
+    .chk-label input[type="checkbox"] {
+      width: 1rem;
+      height: 1rem;
+      accent-color: var(--amber);
+      cursor: pointer;
+    }
+
+    .sessions-summary {
+      background: var(--bg-mid);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 0.625rem 0.875rem;
+      font-size: 0.875rem;
+      color: var(--text-2);
+      margin-bottom: 1rem;
+      font-family: var(--mono);
+    }
+
+    .session-item {
+      background: var(--bg-mid);
+      border: 1px solid var(--border);
+      border-left: 3px solid transparent;
+      border-radius: 8px;
+      padding: 0.75rem 0.875rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .session-item--test { border-left-color: var(--amber); }
+
+    .session-meta {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin-bottom: 0.3rem;
+    }
+
+    .session-date {
+      font-size: 0.8125rem;
+      font-family: var(--mono);
+      color: var(--text-3);
+      white-space: nowrap;
+    }
+
+    .session-test-badge {
+      background: rgba(251,191,36,0.15);
+      border: 1px solid rgba(251,191,36,0.3);
+      color: var(--amber);
+      font-size: 0.6875rem;
+      font-weight: 700;
+      padding: 0.1em 0.4em;
+      border-radius: 4px;
+      letter-spacing: 0.05em;
+      white-space: nowrap;
+    }
+
+    .session-who {
+      font-size: 0.875rem;
+      color: var(--text-1);
+      font-weight: 500;
+    }
+
+    .session-stats {
+      font-size: 0.8125rem;
+      color: var(--text-3);
+      font-family: var(--mono);
+      margin-left: auto;
+      white-space: nowrap;
+    }
+
+    .session-narrative {
+      font-size: 0.8125rem;
+      color: var(--text-3);
+      font-style: italic;
+      margin-bottom: 0.4rem;
+      line-height: 1.4;
+    }
+
+    .session-actions {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+      justify-content: flex-end;
+    }
+
+    .btn-small {
+      padding: 0.3rem 0.625rem !important;
+      font-size: 0.8rem !important;
+    }
+
+    a.btn { text-decoration: none; }
+
+    .sessions-empty {
+      color: var(--text-4);
+      font-size: 0.875rem;
+      padding: 1.5rem 0;
+      text-align: center;
+    }
+
+    .sessions-error { color: var(--red); font-size: 0.875rem; }
   </style>
 </head>
 <body>
@@ -391,6 +512,44 @@
             <a href="../worker/README.md">../worker/README.md</a>.
           </p>
         </div>
+      </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════
+         Section: Sessions
+    ════════════════════════════════════════ -->
+    <section class="card" id="section-sessions">
+      <div class="card-header">
+        <h2>Sessions &amp; Submissions</h2>
+      </div>
+      <div class="card-body">
+
+        <div class="sessions-toolbar">
+          <label class="chk-label" for="chk-test-only">
+            <input type="checkbox" id="chk-test-only">
+            <span>Test runs only</span>
+          </label>
+          <div class="spacer"></div>
+          <button type="button" class="btn btn-primary" id="btn-load-sessions">Load Sessions</button>
+        </div>
+
+        <div id="sessions-summary" class="sessions-summary" hidden></div>
+        <div id="sessions-loading" class="config-loading" hidden>Loading&hellip;</div>
+        <div id="sessions-error" class="sessions-error" hidden></div>
+        <div id="sessions-list" hidden></div>
+        <button type="button" id="btn-load-more" class="btn btn-ghost"
+          style="width:100%;margin-top:0.625rem;" hidden>Load more</button>
+
+        <div class="prose" style="margin-top:1.25rem">
+          <p>
+            Sessions are stored as closed GitHub Issues labelled <code>session</code>.
+            <strong>Delete</strong> permanently removes the issue via the GitHub GraphQL API —
+            requires a PAT with <code>repo</code> scope saved in the section above.
+            Use the <strong>Test run</strong> checkbox in the main app before submitting
+            so test runs get a <code>test</code> label and are easy to find here.
+          </p>
+        </div>
+
       </div>
     </section>
 
@@ -531,6 +690,247 @@
       // ── Init ───────────────────────────────────────────────
       refreshPatUi();
       loadConfig();
+    }());
+  </script>
+
+  <script>
+    (function () {
+      'use strict';
+
+      var REPO       = 'davetriska02-collab/circle-of-death-tracker';
+      var API_BASE   = 'https://api.github.com';
+      var GRAPHQL    = 'https://api.github.com/graphql';
+      var PAT_KEY_SV = 'itslowness.pat';
+
+      var allIssues  = [];
+      var currentPage = 1;
+      var hasMore    = false;
+
+      var elSummary  = document.getElementById('sessions-summary');
+      var elLoading  = document.getElementById('sessions-loading');
+      var elError    = document.getElementById('sessions-error');
+      var elList     = document.getElementById('sessions-list');
+      var elLoadMore = document.getElementById('btn-load-more');
+      var elTestOnly = document.getElementById('chk-test-only');
+
+      // ── Helpers ────────────────────────────────────────────────────────
+      function escHtml2(str) {
+        return String(str)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;');
+      }
+
+      function fmtDur(seconds) {
+        var s = seconds || 0;
+        if (s >= 3600) {
+          return Math.floor(s / 3600) + 'h ' + Math.floor((s % 3600) / 60) + 'm';
+        }
+        if (s >= 60) {
+          return Math.floor(s / 60) + 'm ' + (s % 60) + 's';
+        }
+        return s + 's';
+      }
+
+      function fmtDate(isoStr) {
+        if (!isoStr) return '?';
+        var d = new Date(isoStr);
+        return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+      }
+
+      function parseSession(body) {
+        if (!body) return null;
+        var m = body.match(/```json\s*([\s\S]*?)\s*```/);
+        if (!m) return null;
+        try { return JSON.parse(m[1]); } catch (_) { return null; }
+      }
+
+      function getPat() {
+        return localStorage.getItem(PAT_KEY_SV);
+      }
+
+      // ── Load sessions ──────────────────────────────────────────────────
+      function loadSessions(page) {
+        elLoading.hidden = false;
+        elError.hidden = true;
+
+        var url = API_BASE + '/repos/' + REPO + '/issues'
+          + '?state=closed&labels=session&per_page=100&page=' + page;
+
+        var headers = { 'X-GitHub-Api-Version': '2022-11-28' };
+        var pat = getPat();
+        if (pat) headers['Authorization'] = 'Bearer ' + pat;
+
+        fetch(url, { headers: headers })
+          .then(function (res) {
+            if (!res.ok) throw new Error('GitHub API ' + res.status);
+            // check Link header for pagination
+            var link = res.headers.get('Link') || '';
+            hasMore = link.includes('rel="next"');
+            return res.json();
+          })
+          .then(function (issues) {
+            elLoading.hidden = true;
+            if (page === 1) allIssues = issues;
+            else allIssues = allIssues.concat(issues);
+            renderSummary();
+            renderList();
+          })
+          .catch(function (err) {
+            elLoading.hidden = true;
+            elError.hidden = false;
+            elError.textContent = 'Could not load sessions: ' + err.message;
+          });
+      }
+
+      // ── Render summary bar ─────────────────────────────────────────────
+      function renderSummary() {
+        var total = allIssues.length;
+        var tests = allIssues.filter(function (i) {
+          return i.labels.some(function (l) { return l.name === 'test'; });
+        }).length;
+        var totalLost = allIssues.reduce(function (acc, i) {
+          var s = parseSession(i.body);
+          return acc + (s && s.totalLostSeconds ? s.totalLostSeconds : 0);
+        }, 0);
+        elSummary.hidden = false;
+        elSummary.textContent =
+          total + ' session' + (total !== 1 ? 's' : '') +
+          ' · ' + tests + ' test' + (tests !== 1 ? 's' : '') +
+          ' · ' + fmtDur(totalLost) + ' lost total';
+      }
+
+      // ── Render list ────────────────────────────────────────────────────
+      function renderList() {
+        elList.hidden = false;
+        elList.innerHTML = '';
+
+        var testOnly = elTestOnly.checked;
+        var filtered = allIssues.filter(function (i) {
+          var isTest = i.labels.some(function (l) { return l.name === 'test'; });
+          return testOnly ? isTest : true;
+        });
+
+        if (filtered.length === 0) {
+          elList.innerHTML = '<p class="sessions-empty">No sessions found.</p>';
+          elLoadMore.hidden = true;
+          return;
+        }
+
+        filtered.forEach(function (issue) {
+          var session = parseSession(issue.body);
+          var isTest  = issue.labels.some(function (l) { return l.name === 'test'; });
+
+          var date      = fmtDate(session ? session.startedAt : issue.created_at);
+          var site      = session ? (session.siteLabel || session.site || '?') : '?';
+          var role      = session ? (session.roleLabel || session.role || '?') : '?';
+          var type      = session ? (session.sessionTypeLabel || session.sessionType || '?') : '?';
+          var incidents = session ? (session.incidentCount || 0) : 0;
+          var lost      = session ? fmtDur(session.totalLostSeconds || 0) : '?';
+          var narrative = session && session.narrative
+            ? session.narrative.slice(0, 120) + (session.narrative.length > 120 ? '…' : '')
+            : '';
+
+          var item = document.createElement('div');
+          item.className = 'session-item' + (isTest ? ' session-item--test' : '');
+
+          var metaHtml =
+            '<div class="session-meta">' +
+              '<span class="session-date">' + escHtml2(date) + '</span>' +
+              (isTest ? '<span class="session-test-badge">TEST</span>' : '') +
+              '<span class="session-who">' +
+                escHtml2(site) + ' &middot; ' + escHtml2(role) + ' &middot; ' + escHtml2(type) +
+              '</span>' +
+              '<span class="session-stats">' +
+                escHtml2(String(incidents)) + ' incident' + (incidents !== 1 ? 's' : '') +
+                ' &middot; ' + escHtml2(lost) +
+              '</span>' +
+            '</div>';
+
+          var narrativeHtml = narrative
+            ? '<div class="session-narrative">' + escHtml2(narrative) + '</div>'
+            : '';
+
+          var actionsHtml =
+            '<div class="session-actions">' +
+              '<a href="' + escHtml2(issue.html_url) + '" target="_blank" rel="noopener"' +
+                ' class="btn btn-ghost btn-small">#' + issue.number + '</a>' +
+              '<button class="btn btn-danger btn-small js-delete" type="button"' +
+                ' data-node-id="' + escHtml2(issue.node_id) + '"' +
+                ' data-issue-number="' + issue.number + '">Delete</button>' +
+            '</div>';
+
+          item.innerHTML = metaHtml + narrativeHtml + actionsHtml;
+
+          item.querySelector('.js-delete').addEventListener('click', function () {
+            handleDelete(this.dataset.nodeId, parseInt(this.dataset.issueNumber), item);
+          });
+
+          elList.appendChild(item);
+        });
+
+        elLoadMore.hidden = !hasMore;
+      }
+
+      // ── Delete via GraphQL ─────────────────────────────────────────────
+      function handleDelete(nodeId, issueNumber, itemEl) {
+        var pat = getPat();
+        if (!pat) {
+          alert('No PAT saved. Set one in the Fallback PAT Mode section above (requires repo scope).');
+          return;
+        }
+        if (!confirm('Permanently delete issue #' + issueNumber + '? This cannot be undone.')) return;
+
+        var btn = itemEl.querySelector('.js-delete');
+        btn.disabled = true;
+        btn.textContent = 'Deleting…';
+
+        var mutation = 'mutation DeleteIssue($id: ID!) { deleteIssue(input: { issueId: $id }) { repository { name } } }';
+
+        fetch(GRAPHQL, {
+          method: 'POST',
+          headers: {
+            'Authorization': 'Bearer ' + pat,
+            'Content-Type': 'application/json',
+            'X-GitHub-Api-Version': '2022-11-28',
+          },
+          body: JSON.stringify({ query: mutation, variables: { id: nodeId } }),
+        })
+          .then(function (res) { return res.json(); })
+          .then(function (data) {
+            if (data.errors) {
+              btn.disabled = false;
+              btn.textContent = 'Delete';
+              alert('Delete failed: ' + data.errors[0].message);
+              return;
+            }
+            allIssues = allIssues.filter(function (i) { return i.node_id !== nodeId; });
+            itemEl.remove();
+            renderSummary();
+          })
+          .catch(function (err) {
+            btn.disabled = false;
+            btn.textContent = 'Delete';
+            alert('Delete failed: ' + err.message);
+          });
+      }
+
+      // ── Wire up controls ───────────────────────────────────────────────
+      document.getElementById('btn-load-sessions').addEventListener('click', function () {
+        currentPage = 1;
+        loadSessions(1);
+      });
+
+      elLoadMore.addEventListener('click', function () {
+        currentPage += 1;
+        loadSessions(currentPage);
+      });
+
+      elTestOnly.addEventListener('change', function () {
+        if (allIssues.length > 0) renderList();
+      });
+
     }());
   </script>
 

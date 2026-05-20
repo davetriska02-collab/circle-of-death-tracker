@@ -132,7 +132,7 @@ body[data-screen="submit"] #screen-active {
 
 select,
 textarea,
-input {
+input:not([type="checkbox"]) {
   width: 100%;
   background: var(--bg-mid);
   color: var(--text-1);
@@ -145,6 +145,45 @@ input {
   -webkit-appearance: none;
   transition: border-color 0.15s, box-shadow 0.15s;
   outline: none;
+}
+
+.field-group--check {
+  padding: 0.125rem 0;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  cursor: pointer;
+  color: var(--text-3);
+  font-size: 0.9rem;
+  font-weight: normal;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.checkbox-label:hover { color: var(--text-2); }
+
+.checkbox-label input[type="checkbox"] {
+  width: 1rem;
+  height: 1rem;
+  accent-color: var(--amber);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.test-chip {
+  background: rgba(251, 191, 36, 0.15);
+  border: 1px solid rgba(251, 191, 36, 0.3);
+  color: var(--amber);
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.1em 0.45em;
+  border-radius: 4px;
+  letter-spacing: 0.05em;
+  vertical-align: middle;
+  margin-left: 0.35rem;
 }
 
 select {

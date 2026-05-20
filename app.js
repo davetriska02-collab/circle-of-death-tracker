@@ -16,6 +16,7 @@ const state = {
     site: '',
     siteLabel: '',
     startedAt: null,
+    testRun: false,
   },
   timer: {
     running: false,
@@ -233,7 +234,9 @@ function bindEvents() {
       site: '',
       siteLabel: '',
       startedAt: null,
+      testRun: false,
     };
+    document.getElementById('chk-test-run').checked = false;
     transitionTo('setup');
   });
 
@@ -285,6 +288,7 @@ function startSession() {
   state.session.sessionType  = typeEl.value;
   state.session.sessionTypeLabel = typeEl.options[typeEl.selectedIndex].text;
   state.session.startedAt    = new Date().toISOString();
+  state.session.testRun      = document.getElementById('chk-test-run').checked;
 
   state.incidents = [];
   state.narrative = '';
@@ -302,9 +306,15 @@ function startSession() {
 }
 
 function renderInfoChip() {
-  const { sessionTypeLabel, roleLabel, siteLabel } = state.session;
-  document.getElementById('info-chip').textContent =
-    `${sessionTypeLabel} · ${roleLabel} · ${siteLabel}`;
+  const { sessionTypeLabel, roleLabel, siteLabel, testRun } = state.session;
+  const chip = document.getElementById('info-chip');
+  chip.textContent = `${sessionTypeLabel} · ${roleLabel} · ${siteLabel}`;
+  if (testRun) {
+    const badge = document.createElement('span');
+    badge.className = 'test-chip';
+    badge.textContent = 'TEST';
+    chip.appendChild(badge);
+  }
 }
 
 // ─── Timer ───────────────────────────────────────────────────────────────────
@@ -681,6 +691,7 @@ function buildSessionPayload() {
     wallClockSeconds: Math.round(
       (now.getTime() - new Date(state.session.startedAt).getTime()) / 1000
     ),
+    testRun: state.session.testRun || false,
     incidentCount: state.incidents.length,
     totalLostSeconds: state.incidents.reduce((s, i) => s + i.durationSeconds, 0),
     narrative: state.narrative,
