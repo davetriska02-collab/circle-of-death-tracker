@@ -4,15 +4,24 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>IT Slowness Tracker</title>
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://*.workers.dev https://api.github.com; script-src 'self';">
+  <meta name="description" content="Log time lost to EMIS and Accurx freezes during a working session.">
+  <meta name="theme-color" content="#09090b">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="IT Slowness">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://*.workers.dev https://api.github.com; script-src 'self'; img-src 'self' data:;">
   <meta name="app-version" content="">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="manifest" href="manifest.webmanifest">
   <link rel="stylesheet" href="app.css">
   <script type="module" src="app.js" defer></script>
 </head>
 <body data-screen="setup">
 
-  <div id="error-banner" class="error-banner" hidden></div>
-  <div id="recovery-banner" class="recovery-banner" hidden>Recovered session from previous page load.</div>
+  <div id="error-banner" class="error-banner" role="alert" hidden></div>
+  <div id="recovery-banner" class="recovery-banner" role="status" hidden>
+    <span>Recovered session from previous page load.</span>
+    <button type="button" id="btn-discard-recovery" class="btn btn-ghost btn-small">Discard</button>
+  </div>
 
   <!-- ═══════════════════════════════════════════
        SCREEN: SETUP
@@ -21,7 +30,7 @@
     <div class="screen-inner">
       <header class="setup-header">
         <h1>IT Slowness Tracker</h1>
-        <p class="subheading">Log your IT session</p>
+        <p class="subheading">Press Space whenever EMIS or Accurx freezes</p>
       </header>
 
       <form id="form-setup" class="setup-form" novalidate>
@@ -58,9 +67,25 @@
         </button>
       </form>
 
+      <details class="howto">
+        <summary>How to use</summary>
+        <ol>
+          <li>Select your site, role, and session type, then start.</li>
+          <li>Press <kbd>Space</kbd> (or tap the green button) when a system freezes.</li>
+          <li>Press <kbd>Space</kbd> again when it recovers. Add an optional note.</li>
+          <li>Hold <strong>End Session</strong> for 2 seconds, review, and submit.</li>
+        </ol>
+        <p>Do not enter patient names or NHS numbers. <a href="./privacy.html">Privacy notice</a>.</p>
+      </details>
+
+      <p id="queue-hint" class="queue-hint" hidden></p>
+
       <footer class="setup-footer">
         <span id="version-display" class="version-label"></span>
-        <a href="./admin/" class="admin-link">Admin →</a>
+        <span class="footer-links">
+          <a href="./privacy.html" class="admin-link">Privacy</a>
+          <a href="./admin/" class="admin-link">Admin →</a>
+        </span>
       </footer>
     </div>
   </section>
@@ -89,10 +114,10 @@
       </div>
 
       <div class="timer-area">
-        <button id="btn-toggle-timer" class="idle" type="button">
+        <button id="btn-toggle-timer" class="idle" type="button" aria-pressed="false" aria-label="Start slowness timer">
           <span class="timer-idle-label">▶&nbsp;&nbsp;Press SPACE to start the clock</span>
           <span class="timer-running-label">
-            <span id="display-elapsed">00:00.0</span>
+            <span id="display-elapsed" aria-hidden="true">00:00.0</span>
             <span class="timer-hint-running">Press SPACE to stop</span>
           </span>
         </button>
@@ -102,10 +127,13 @@
       <ol id="incident-list" class="incident-list"></ol>
 
       <div class="end-session-area">
-        <button id="btn-end-session" class="btn btn-warning" type="button" data-hold="true">
+        <button id="btn-end-session" class="btn btn-warning" type="button" data-hold="true" aria-describedby="hold-hint">
           End Session
         </button>
-        <p class="hold-hint">Hold for 2 seconds to end</p>
+        <p id="hold-hint" class="hold-hint">Hold for 2 seconds to end. Keyboard: press Enter, then confirm.</p>
+        <button id="btn-discard-session" class="btn btn-ghost btn-small" type="button">
+          Discard session
+        </button>
       </div>
 
     </div>
@@ -131,6 +159,7 @@
           </thead>
           <tbody id="incident-table-body"></tbody>
         </table>
+        <p id="submit-empty" class="submit-empty" hidden>No incidents recorded this session.</p>
       </div>
 
       <div class="field-group">

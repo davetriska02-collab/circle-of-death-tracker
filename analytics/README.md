@@ -18,7 +18,7 @@ Python 3.8 or newer is required. The script itself uses only the standard librar
 
 1. Go to **GitHub → Settings → Developer settings → Personal access tokens → Fine-grained tokens**.
 2. Set **Resource owner** to `davetriska02-collab`.
-3. Under **Repository access**, select only `davetriska02-collab/medicus-suite`.
+3. Under **Repository access**, select only `davetriska02-collab/circle-of-death-tracker`.
 4. Under **Permissions → Repository permissions → Issues**, choose **Read-only**.
 5. Generate and copy the token. Store it in a password manager; rotate quarterly.
 
@@ -44,10 +44,16 @@ Write output to a custom directory:
 python fetch_sessions.py --token ghp_YOURTOKEN --since 2026-01-01 --out ./data/
 ```
 
+Include test runs (excluded by default):
+
+```bash
+python fetch_sessions.py --token ghp_YOURTOKEN --include-tests
+```
+
 The script prints a summary when done:
 
 ```
-Fetching closed issues labelled 'session' from davetriska02-collab/medicus-suite ...
+Fetching closed issues labelled 'session' from davetriska02-collab/circle-of-death-tracker ...
   Fetched 143 issue(s).
 
 Done.
@@ -77,6 +83,7 @@ One row per submitted session.
 | `incident_count` | Number of IT slowness incidents logged |
 | `total_lost_seconds` | Sum of all incident durations |
 | `narrative` | Free-text notes added by the user at submission |
+| `test_run` | `True` if the session was marked as a test (excluded unless `--include-tests`) |
 | `app_version` | Version of the tracker app used |
 | `tz` | User's reported timezone (e.g. `Europe/London`) |
 | `user_agent_short` | First 80 characters of the browser user-agent string |
@@ -164,3 +171,17 @@ print(top10.to_string())
 3. Click anywhere in the data, then choose **Insert → PivotTable**.
 4. For a lost-time-by-site summary: drag `site_label` to **Rows**, `total_lost_seconds` to **Values** (set to *Sum*).
 5. For a date-range filter: drag `started_at` to **Filters** and use the date slicer.
+
+---
+
+## 7. Retention (12 months)
+
+Session issues should be deleted after 12 months. Dry-run first:
+
+```bash
+python delete_sessions.py --token ghp_YOURTOKEN --older-than-days 365 --dry-run
+python delete_sessions.py --token ghp_YOURTOKEN --older-than-days 365 --site cranleigh
+```
+
+`--site` matches the site id in the issue title (`cranleigh` or `guildowns`).
+

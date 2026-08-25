@@ -46,7 +46,7 @@ Copy that URL into `config.json` as the value of `workerUrl`:
 
 ```json
 {
-  "workerUrl": "https://it-slowness-proxy.YOURNAME.workers.dev"
+  "workerUrl": "https://it-slowness-proxy.YOURNAME.workers.dev/submit"
 }
 ```
 

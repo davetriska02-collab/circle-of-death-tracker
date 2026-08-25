@@ -1,3 +1,5 @@
+import { sessionContainsPII } from '../pii.js';
+
 const ALLOWED_ORIGIN = 'https://davetriska02-collab.github.io';
 const GITHUB_REPO = 'davetriska02-collab/circle-of-death-tracker';
 const GITHUB_API = 'https://api.github.com';
@@ -7,7 +9,7 @@ const MAX_NARRATIVE_CHARS = 2000;
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': ALLOWED_ORIGIN,
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type',
   'Access-Control-Max-Age': '86400',
 };
@@ -30,11 +32,6 @@ function formatDuration(seconds) {
     return `${m}m ${s}s`;
   }
   return `${seconds}s`;
-}
-
-function containsPII(value) {
-  if (typeof value !== 'string') return false;
-  return /\bNHS\s*number\b/i.test(value) || /\b\d{10}\b/.test(value);
 }
 
 async function handleSubmit(request, env) {
@@ -93,10 +90,8 @@ async function handleSubmit(request, env) {
     return jsonResponse({ error: 'Invalid session.narrative' }, 400);
   }
 
-  for (const [key, value] of Object.entries(session)) {
-    if (containsPII(value)) {
-      return jsonResponse({ error: 'PII detected — do not include patient identifiers' }, 422);
-    }
+  if (sessionContainsPII(session)) {
+    return jsonResponse({ error: 'PII detected — do not include patient identifiers' }, 422);
   }
 
   const dateStr = session.startedAt.slice(0, 10);
@@ -150,6 +145,10 @@ export default {
 
     if (method === 'OPTIONS') {
       return new Response(null, { status: 204, headers: CORS_HEADERS });
+    }
+
+    if (method === 'GET' && (pathname === '/' || pathname === '/health')) {
+      return jsonResponse({ ok: true, service: 'it-slowness-proxy' });
     }
 
     if (method === 'POST' && pathname === '/submit') {
