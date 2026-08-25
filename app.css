@@ -134,6 +134,13 @@ body[data-screen="submit"] #screen-active { display: none; }
   background: linear-gradient(135deg, rgba(255,159,10,0.16), rgba(255,159,10,0.08));
   border-bottom: 0.5px solid rgba(255,179,64,0.30);
   color: var(--amber-hi);
+  display: flex; align-items: center; justify-content: center; gap: 0.75rem; flex-wrap: wrap;
+}
+
+.error-banner.info-banner {
+  background: linear-gradient(135deg, rgba(48,209,88,0.16), rgba(48,209,88,0.08));
+  border-bottom-color: rgba(61,224,101,0.30);
+  color: var(--green-hi);
 }
 
 /* ─── Setup header ───────────────────────────────────────────────────────── */
@@ -314,6 +321,39 @@ select option { background: var(--bg-2); color: var(--label-1); }
 }
 
 /* ─── Setup footer ───────────────────────────────────────────────────────── */
+.howto {
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.04) 0%, transparent 55%),
+    var(--bg-1);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: var(--r);
+  padding: 0.75rem 1rem;
+  color: var(--label-2);
+  font-size: 0.875rem;
+}
+
+.howto summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--label-1);
+  letter-spacing: -0.01em;
+}
+
+.howto ol {
+  margin: 0.75rem 0 0.5rem 1.15rem;
+  display: flex; flex-direction: column; gap: 0.35rem;
+}
+
+.howto a { color: var(--blue-hi); }
+
+.queue-hint {
+  text-align: center;
+  font-size: 0.8125rem;
+  color: var(--amber-hi);
+}
+
+.footer-links { display: flex; align-items: center; gap: 1rem; }
+
 .setup-footer {
   display: flex; align-items: center; justify-content: space-between;
   padding-top: 0.25rem;
@@ -665,7 +705,14 @@ select option { background: var(--bg-2); color: var(--label-1); }
   transition: transform 2s linear;
 }
 
-.hold-hint { font-size: 0.72rem; color: var(--label-4); letter-spacing: -0.005em; }
+.hold-hint { font-size: 0.72rem; color: var(--label-4); letter-spacing: -0.005em; text-align: center; }
+
+.submit-empty {
+  padding: 1.25rem 1rem;
+  text-align: center;
+  color: var(--label-4);
+  font-size: 0.875rem;
+}
 
 /* ─── Submit screen ──────────────────────────────────────────────────────── */
 .submit-heading {

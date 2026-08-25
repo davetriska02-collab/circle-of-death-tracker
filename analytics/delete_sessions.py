@@ -11,6 +11,7 @@ classic PAT used for the Worker (repo scope) should work.
 
 import argparse
 import json
+import re
 import sys
 import time
 import urllib.request
@@ -75,14 +76,45 @@ def delete_issue(token, node_id):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Delete all session issues")
+    parser = argparse.ArgumentParser(description="Delete session issues")
     parser.add_argument("--token", required=True, help="GitHub PAT")
     parser.add_argument("--dry-run", action="store_true", help="List issues without deleting")
+    parser.add_argument(
+        "--older-than-days",
+        type=int,
+        default=None,
+        metavar="N",
+        help="Only delete sessions whose title date is older than N days (use 365 for the 12-month retention policy)",
+    )
+    parser.add_argument(
+        "--site",
+        default=None,
+        help="Only delete sessions for this site id (e.g. cranleigh)",
+    )
     args = parser.parse_args()
 
     print("Fetching session issues…")
     issues = get_session_issue_ids(args.token)
-    print(f"Found {len(issues)} issues to delete.\n")
+
+    if args.site:
+        issues = [i for i in issues if f" {args.site} " in f" {i['title']} "]
+
+    if args.older_than_days is not None:
+        cutoff = time.time() - (args.older_than_days * 86400)
+        kept = []
+        for issue in issues:
+            match = re.search(r"session (\d{4}-\d{2}-\d{2})", issue["title"])
+            if not match:
+                continue
+            try:
+                stamp = time.mktime(time.strptime(match.group(1), "%Y-%m-%d"))
+            except ValueError:
+                continue
+            if stamp < cutoff:
+                kept.append(issue)
+        issues = kept
+
+    print(f"Found {len(issues)} issue(s) to delete.\n")
 
     if not issues:
         print("Nothing to do.")

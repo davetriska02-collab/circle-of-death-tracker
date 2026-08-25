@@ -1,0 +1,18 @@
+{
+  "name": "IT Slowness Tracker",
+  "short_name": "IT Slowness",
+  "description": "Log time lost to EMIS and Accurx freezes during a working session.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#09090b",
+  "theme_color": "#09090b",
+  "icons": [
+    {
+      "src": "favicon.svg",
+      "type": "image/svg+xml",
+      "sizes": "any",
+      "purpose": "any"
+    }
+  ]
+}

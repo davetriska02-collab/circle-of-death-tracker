@@ -1,0 +1,12 @@
+.DS_Store
+Thumbs.db
+analytics/out/
+*.csv
+node_modules/
+.wrangler/
+.dev.vars
+.venv/
+__pycache__/
+*.pyc
+.idea/
+.vscode/

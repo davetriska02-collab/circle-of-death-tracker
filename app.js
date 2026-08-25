@@ -1,4 +1,5 @@
-import { submit } from './storage.js';
+import { submit, getQueueLength, drainQueue } from './storage.js';
+import { findPIIPaths } from './pii.js';
 
 const DRAFT_KEY        = 'itslowness.draft';
 const LAST_SITE_KEY    = 'itslowness.lastSite';
@@ -29,6 +30,7 @@ const state = {
 let rafId = null;
 let heartbeatId = null;
 let holdTimerId = null;
+let holdCompleted = false;
 let activeNoteIndex = null;
 let pendingSessionPayload = null;
 
@@ -61,6 +63,8 @@ async function boot() {
   populateSelect('sel-session-type', config.sessionTypes);
 
   restoreLastSelections();
+  refreshSetupCta();
+  renderQueueHint();
 
   const draft = loadDraft();
   if (draft && draft.session && draft.session.startedAt) {
@@ -69,6 +73,8 @@ async function boot() {
 
   bindEvents();
   startHeartbeat();
+  registerServiceWorker();
+  flushOfflineQueue();
 }
 
 function isValidConfig(c) {
@@ -135,7 +141,12 @@ function loadDraft() {
 
 function saveDraft() {
   try {
-    localStorage.setItem(DRAFT_KEY, JSON.stringify(state));
+    localStorage.setItem(DRAFT_KEY, JSON.stringify({
+      session: state.session,
+      incidents: state.incidents,
+      narrative: state.narrative,
+      timer: { running: false },
+    }));
   } catch {
     // quota exceeded — silently ignore
   }
@@ -188,6 +199,19 @@ function bindEvents() {
     if (state.timer.running) stopTimer();
     transitionTo('setup');
     syncSelectsToState();
+    refreshSetupCta();
+  });
+
+  document.getElementById('btn-discard-session').addEventListener('click', () => {
+    if (window.confirm('Discard this session? Logged incidents will be lost.')) {
+      discardSession();
+    }
+  });
+
+  document.getElementById('btn-discard-recovery').addEventListener('click', () => {
+    if (window.confirm('Discard the recovered session?')) {
+      discardSession();
+    }
   });
 
   document.getElementById('btn-toggle-timer').addEventListener('click', toggleTimer);
@@ -197,6 +221,7 @@ function bindEvents() {
   btnEnd.addEventListener('pointerup', onEndSessionPointerUp);
   btnEnd.addEventListener('pointercancel', onEndSessionPointerUp);
   btnEnd.addEventListener('pointerleave', onEndSessionPointerUp);
+  btnEnd.addEventListener('click', onEndSessionClick);
 
   document.getElementById('btn-note-confirm').addEventListener('click', confirmNote);
   document.getElementById('btn-note-cancel').addEventListener('click', () => {
@@ -210,6 +235,7 @@ function bindEvents() {
 
   document.getElementById('session-narrative').addEventListener('input', e => {
     state.narrative = e.target.value;
+    saveDraft();
   });
 
   document.getElementById('btn-submit').addEventListener('click', handleSubmit);
@@ -235,6 +261,11 @@ function bindEvents() {
       testRun: false,
     };
     document.getElementById('chk-test-run').checked = false;
+    document.getElementById('session-narrative').value = '';
+    resetToggleButton();
+    refreshSetupCta();
+    renderQueueHint();
+    hideErrorBanner();
     transitionTo('setup');
   });
 
@@ -263,6 +294,80 @@ function syncSelectsToState() {
   trySetSelect('sel-site', state.session.site);
   trySetSelect('sel-role', state.session.role);
   trySetSelect('sel-session-type', state.session.sessionType);
+  document.getElementById('chk-test-run').checked = !!state.session.testRun;
+}
+
+function refreshSetupCta() {
+  const btn = document.getElementById('btn-start-session');
+  const editing = !!state.session.startedAt;
+  btn.textContent = editing ? 'Resume session' : 'Start Session';
+}
+
+function renderQueueHint() {
+  const hint = document.getElementById('queue-hint');
+  if (!hint) return;
+  const n = getQueueLength();
+  if (n > 0) {
+    hint.hidden = false;
+    hint.textContent = n === 1
+      ? '1 session waiting to send (offline queue).'
+      : `${n} sessions waiting to send (offline queue).`;
+  } else {
+    hint.hidden = true;
+    hint.textContent = '';
+  }
+}
+
+async function flushOfflineQueue() {
+  if (!state.config || getQueueLength() === 0) return;
+  try {
+    const result = await drainQueue(state.config);
+    renderQueueHint();
+    if (result.flushed > 0) {
+      showErrorBanner(
+        result.remaining === 0
+          ? `Sent ${result.flushed} queued session${result.flushed === 1 ? '' : 's'}.`
+          : `Sent ${result.flushed} queued session(s); ${result.remaining} still waiting.`
+      );
+      const banner = document.getElementById('error-banner');
+      banner.classList.add('info-banner');
+    }
+  } catch {
+    renderQueueHint();
+  }
+}
+
+function discardSession() {
+  if (state.timer.running) stopTimer(false);
+  clearDraft();
+  pendingSessionPayload = null;
+  state.incidents = [];
+  state.narrative = '';
+  state.session = {
+    sessionType: '',
+    sessionTypeLabel: '',
+    role: '',
+    roleLabel: '',
+    site: '',
+    siteLabel: '',
+    startedAt: null,
+    testRun: false,
+  };
+  document.getElementById('chk-test-run').checked = false;
+  document.getElementById('session-narrative').value = '';
+  document.getElementById('recovery-banner').hidden = true;
+  resetToggleButton();
+  restoreLastSelections();
+  refreshSetupCta();
+  hideErrorBanner();
+  transitionTo('setup');
+}
+
+function registerServiceWorker() {
+  if (!('serviceWorker' in navigator)) return;
+  navigator.serviceWorker.register('./sw.js').catch(() => {
+    // private mode / file:// — ignore
+  });
 }
 
 // ─── Session start ───────────────────────────────────────────────────────────
@@ -279,28 +384,33 @@ function startSession() {
 
   hideErrorBanner();
 
+  const editing = !!state.session.startedAt;
+
   state.session.site         = siteEl.value;
   state.session.siteLabel    = siteEl.options[siteEl.selectedIndex].text;
   state.session.role         = roleEl.value;
   state.session.roleLabel    = roleEl.options[roleEl.selectedIndex].text;
   state.session.sessionType  = typeEl.value;
   state.session.sessionTypeLabel = typeEl.options[typeEl.selectedIndex].text;
-  state.session.startedAt    = new Date().toISOString();
   state.session.testRun      = document.getElementById('chk-test-run').checked;
 
-  state.incidents = [];
-  state.narrative = '';
-  pendingSessionPayload = null;
+  if (!editing) {
+    state.session.startedAt = new Date().toISOString();
+    state.incidents = [];
+    state.narrative = '';
+    pendingSessionPayload = null;
+    document.getElementById('session-narrative').value = '';
+    resetToggleButton();
+  }
 
   saveLastSelections();
+  saveDraft();
   transitionTo('active');
   renderInfoChip();
   renderIncidentList();
   updateStats();
 
   document.getElementById('recovery-banner').hidden = true;
-
-  resetToggleButton();
 }
 
 function renderInfoChip() {
@@ -333,13 +443,15 @@ function startTimer() {
   const btn = document.getElementById('btn-toggle-timer');
   btn.classList.remove('idle');
   btn.classList.add('running');
+  btn.setAttribute('aria-pressed', 'true');
+  btn.setAttribute('aria-label', 'Stop slowness timer');
 
   startElapsedLoop();
 }
 
-function stopTimer() {
-  const elapsed = performance.now() - state.timer.incidentStart;
-  const durationSeconds = Math.round(elapsed / 1000);
+function stopTimer(recordIncident = true) {
+  const started = state.timer.incidentStart;
+  const startedISO = state.timer.incidentStartISO;
 
   state.timer.running = false;
 
@@ -348,19 +460,25 @@ function stopTimer() {
     rafId = null;
   }
 
+  state.timer.incidentStart    = null;
+  state.timer.incidentStartISO = null;
+  resetToggleButton();
+
+  if (!recordIncident || started == null) return;
+
+  const elapsed = performance.now() - started;
+  const durationSeconds = Math.round(elapsed / 1000);
+
   const incident = {
     id: state.incidents.length + 1,
-    startedAt: state.timer.incidentStartISO,
+    startedAt: startedISO,
     endedAt: new Date().toISOString(),
     durationSeconds,
     note: '',
   };
 
   state.incidents.push(incident);
-  state.timer.incidentStart    = null;
-  state.timer.incidentStartISO = null;
-
-  resetToggleButton();
+  saveDraft();
   renderIncidentList();
   updateStats();
 }
@@ -369,6 +487,8 @@ function resetToggleButton() {
   const btn = document.getElementById('btn-toggle-timer');
   btn.classList.remove('running');
   btn.classList.add('idle');
+  btn.setAttribute('aria-pressed', 'false');
+  btn.setAttribute('aria-label', 'Start slowness timer');
   document.getElementById('display-elapsed').textContent = '00:00.0';
 }
 
@@ -456,6 +576,7 @@ function renderIncidentList() {
       activeNoteIndex = null;
       state.incidents.splice(originalIdx, 1);
       state.incidents.forEach((inc, i) => { inc.id = i + 1; });
+      saveDraft();
       renderIncidentList();
       updateStats();
     });
@@ -506,6 +627,7 @@ function confirmNote() {
   state.incidents[activeNoteIndex].note = value;
   activeNoteIndex = null;
   document.getElementById('note-dialog').close();
+  saveDraft();
   renderIncidentList();
 }
 
@@ -559,6 +681,7 @@ function onEndSessionPointerDown(e) {
 
   holdTimerId = setTimeout(() => {
     holdTimerId = null;
+    holdCompleted = true;
     btn.classList.remove('holding');
     endSession();
   }, 2000);
@@ -572,8 +695,22 @@ function onEndSessionPointerUp() {
   document.getElementById('btn-end-session').classList.remove('holding');
 }
 
+function onEndSessionClick(e) {
+  if (holdCompleted) {
+    holdCompleted = false;
+    e.preventDefault();
+    return;
+  }
+  if (e.detail === 0) {
+    if (window.confirm('End this session and review before submitting?')) {
+      endSession();
+    }
+  }
+}
+
 function endSession() {
   if (state.timer.running) stopTimer();
+  saveDraft();
   renderSubmitScreen();
   transitionTo('submit');
 }
@@ -622,8 +759,12 @@ function renderSubmitScreen() {
 
   document.getElementById('btn-submit').disabled = false;
   document.getElementById('btn-submit').hidden = false;
+  document.getElementById('btn-submit').textContent = 'Submit to central log';
   document.getElementById('btn-new-session').hidden = true;
   document.getElementById('escape-hatch').hidden = true;
+
+  const empty = document.getElementById('submit-empty');
+  if (empty) empty.hidden = count > 0;
 }
 
 // ─── Submit ──────────────────────────────────────────────────────────────────
@@ -632,6 +773,17 @@ async function handleSubmit() {
   state.narrative = document.getElementById('session-narrative').value;
 
   const payload = buildSessionPayload();
+  const piiPaths = findPIIPaths(payload);
+  if (piiPaths.length > 0) {
+    const status = document.getElementById('submit-status');
+    status.hidden = false;
+    status.className = 'submit-status error';
+    status.textContent = 'Submission blocked: notes must not include NHS numbers or the phrase “NHS number”.';
+    document.getElementById('escape-hatch').hidden = false;
+    pendingSessionPayload = payload;
+    return;
+  }
+
   pendingSessionPayload = payload;
 
   const btn = document.getElementById('btn-submit');
@@ -655,6 +807,7 @@ async function handleSubmit() {
 
     if (result.ok) {
       clearDraft();
+      renderQueueHint();
       status.className = 'submit-status success';
       status.textContent = result.issueNumber
         ? `Submitted successfully. Issue #${result.issueNumber}.`
@@ -663,6 +816,7 @@ async function handleSubmit() {
       document.getElementById('btn-new-session').hidden = false;
       document.getElementById('escape-hatch').hidden = true;
     } else if (result.queued) {
+      renderQueueHint();
       status.className = 'submit-status queued';
       status.textContent = `Saved to offline queue: ${result.error}. It will be retried next time.`;
       document.getElementById('escape-hatch').hidden = false;
@@ -725,11 +879,14 @@ function downloadJson(payload) {
 function showErrorBanner(msg) {
   const banner = document.getElementById('error-banner');
   banner.textContent = msg;
+  banner.classList.remove('info-banner');
   banner.hidden = false;
 }
 
 function hideErrorBanner() {
-  document.getElementById('error-banner').hidden = true;
+  const banner = document.getElementById('error-banner');
+  banner.hidden = true;
+  banner.classList.remove('info-banner');
 }
 
 // ─── Init ────────────────────────────────────────────────────────────────────

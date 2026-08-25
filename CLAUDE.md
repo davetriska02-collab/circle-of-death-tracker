@@ -13,7 +13,10 @@ index.html       Single-page app, three screens: setup → active → submit
 app.css          Dark theme, pulsing start/stop button, incident cards
 app.js           ES module: state machine, keyboard shortcuts, timer, draft recovery
 storage.js       ES module: submit to Worker or direct-PAT, offline queue
+pii.js           Shared NHS-number / PII checks (app + Worker)
 config.json      Sites, roles, session types — edit here to add surgeries
+privacy.html     Staff-facing privacy notice
+sw.js            App-shell service worker (offline reopen)
 admin/
   index.html     Config preview + fallback PAT management (self-contained)
 worker/
@@ -22,8 +25,12 @@ worker/
   README.md      Worker deployment instructions
 analytics/
   fetch_sessions.py   Pulls all sessions from Issues → sessions.csv + incidents.csv
+  delete_sessions.py  Retention / test cleanup
   requirements.txt
   README.md      Pandas/Excel analysis instructions
+tests/
+  pii.test.mjs
+  config.test.mjs
 ```
 
 ## Key design decisions

@@ -237,6 +237,13 @@
     }
     .btn-danger:hover { background: rgba(248, 113, 113, 0.25); }
 
+    .btn-ghost {
+      background: rgba(255,255,255,0.06);
+      color: var(--text-2);
+      border: 1px solid var(--border-hi);
+    }
+    .btn-ghost:hover { background: rgba(255,255,255,0.10); color: var(--text-1); }
+
     .pat-actions {
       display: flex;
       gap: 0.625rem;
@@ -508,9 +515,10 @@
             secrets are stored on the client device.
           </p>
           <p>
-            <code>"pat"</code> &mdash; The app reads a PAT from <code>localStorage</code> (set via
+            <code>"direct-pat"</code> &mdash; The app reads a PAT from <code>localStorage</code> (set via
             the Fallback PAT Mode section above) and calls the GitHub API directly from the browser.
-            Use this only for testing or when a Worker is not available.
+            Use this only for testing or when a Worker is not available. The config value must be
+            exactly <code>direct-pat</code>, not <code>pat</code>.
           </p>
           <p>
             Changing <code>storageMode</code> requires editing <code>config.json</code> and

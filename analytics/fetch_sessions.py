@@ -16,7 +16,7 @@ import urllib.request
 import urllib.parse
 import urllib.error
 
-REPO = "davetriska02-collab/medicus-suite"
+REPO = "davetriska02-collab/circle-of-death-tracker"
 API_BASE = "https://api.github.com"
 JSON_BLOCK_RE = re.compile(r'```json\s*(.*?)\s*```', re.DOTALL)
 
@@ -34,6 +34,7 @@ SESSION_FIELDS = [
     "incident_count",
     "total_lost_seconds",
     "narrative",
+    "test_run",
     "app_version",
     "tz",
     "user_agent_short",
@@ -133,6 +134,7 @@ def build_session_row(data):
         "incident_count":        data.get("incidentCount", ""),
         "total_lost_seconds":    data.get("totalLostSeconds", ""),
         "narrative":             data.get("narrative", ""),
+        "test_run":              bool(data.get("testRun", False)),
         "app_version":           client.get("appVersion", ""),
         "tz":                    client.get("tz", ""),
         "user_agent_short":      user_agent[:80],
@@ -168,7 +170,7 @@ def main():
         "--token",
         required=True,
         metavar="PAT",
-        help="GitHub Personal Access Token with Issues: Read scope on davetriska02-collab/medicus-suite",
+        help="GitHub Personal Access Token with Issues: Read scope on davetriska02-collab/circle-of-death-tracker",
     )
     parser.add_argument(
         "--since",
@@ -181,6 +183,11 @@ def main():
         metavar="DIR",
         default="./out/",
         help="Output directory for CSV files (default: ./out/)",
+    )
+    parser.add_argument(
+        "--include-tests",
+        action="store_true",
+        help="Include sessions flagged as test runs (excluded by default)",
     )
     args = parser.parse_args()
 
@@ -203,6 +210,7 @@ def main():
     session_rows = []
     incident_rows = []
     parse_errors = 0
+    skipped_tests = 0
 
     for issue in issues:
         issue_number = issue.get("number", "?")
@@ -214,6 +222,9 @@ def main():
             continue
 
         session_row = build_session_row(data)
+        if session_row["test_run"] and not args.include_tests:
+            skipped_tests += 1
+            continue
         session_rows.append(session_row)
         incident_rows.extend(build_incident_rows(session_row["session_id"], data))
 
@@ -223,11 +234,10 @@ def main():
     write_csv(sessions_path, SESSION_FIELDS, session_rows)
     write_csv(incidents_path, INCIDENT_FIELDS, incident_rows)
 
-    total_parsed = total_fetched - parse_errors
     print()
     print(f"Done.")
     print(f"  Issues fetched : {total_fetched}")
-    print(f"  Sessions parsed: {total_parsed}  ({parse_errors} skipped due to errors)")
+    print(f"  Sessions written: {len(session_rows)}  ({parse_errors} parse errors, {skipped_tests} test runs skipped)")
     print(f"  Incidents total: {len(incident_rows)}")
     print(f"  Sessions CSV   : {os.path.abspath(sessions_path)}")
     print(f"  Incidents CSV  : {os.path.abspath(incidents_path)}")

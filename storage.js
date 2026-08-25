@@ -31,6 +31,10 @@ function enqueue(session) {
   saveQueue(queue);
 }
 
+export function getQueueLength() {
+  return loadQueue().length;
+}
+
 async function submitOne(session, config) {
   if (config.storageMode === 'worker') {
     return submitViaWorker(session, config);
@@ -125,19 +129,22 @@ async function submitViaPat(session, config) {
   return { ok: true, issueNumber: issueData.number };
 }
 
-async function drainQueue(config) {
+export async function drainQueue(config) {
   const queue = loadQueue();
-  if (queue.length === 0) return;
+  if (queue.length === 0) return { flushed: 0, remaining: 0 };
 
   const remaining = [];
+  let flushed = 0;
   for (const session of queue) {
     try {
       await submitOne(session, config);
+      flushed += 1;
     } catch {
       remaining.push(session);
     }
   }
   saveQueue(remaining);
+  return { flushed, remaining: remaining.length };
 }
 
 export async function submit(session, config) {

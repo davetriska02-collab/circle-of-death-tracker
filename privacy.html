@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Privacy notice — IT Slowness Tracker</title>
+  <meta name="theme-color" content="#09090b">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="app.css">
+  <style>
+    .privacy { max-width: 40rem; margin: 0 auto; padding: 2rem 1.25rem 4rem; }
+    .privacy h1 { font-size: 1.75rem; letter-spacing: -0.03em; margin-bottom: 0.35rem; }
+    .privacy h2 { font-size: 1.05rem; margin: 1.75rem 0 0.5rem; letter-spacing: -0.02em; }
+    .privacy p, .privacy li { color: var(--label-2); }
+    .privacy ul { margin: 0.4rem 0 0 1.15rem; display: flex; flex-direction: column; gap: 0.3rem; }
+    .privacy a { color: var(--blue-hi); }
+    .lede { color: var(--label-3); margin-bottom: 1.25rem; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.875rem; margin: 0.75rem 0; }
+    th, td { text-align: left; padding: 0.5rem 0.6rem; border-bottom: 1px solid var(--sep); vertical-align: top; }
+    th { color: var(--label-3); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; }
+    td { color: var(--label-2); }
+  </style>
+</head>
+<body>
+  <main class="privacy">
+    <p><a class="admin-link" href="./">← Back to app</a></p>
+    <h1>Staff privacy notice</h1>
+    <p class="lede">IT Slowness Tracker · Cranleigh Surgery and Guildowns Group Practice · Version 1.0</p>
+
+    <h2>Who collects this data?</h2>
+    <p>Cranleigh Surgery and Guildowns Group Practice are joint data controllers. Questions and rights requests go to the practice manager at the site where you work.</p>
+
+    <h2>What is collected, and why?</h2>
+    <table>
+      <thead><tr><th>Data</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr><td>Site</td><td>Which practice is affected</td></tr>
+        <tr><td>Role category</td><td>Whether some staff groups are hit harder</td></tr>
+        <tr><td>Session type</td><td>Duty / normal / admin context</td></tr>
+        <tr><td>Start and end times, incident durations</td><td>To quantify time lost</td></tr>
+        <tr><td>Optional notes</td><td>What froze (for example “EMIS labs slow”)</td></tr>
+      </tbody>
+    </table>
+    <p>Your name, staff number, NHS number, patient names, and other patient identifiers are <strong>not</strong> collected.</p>
+
+    <h2>Lawful basis</h2>
+    <p>UK GDPR Article 6(1)(e) — public task. Monitoring clinical IT is necessary for delivering NHS primary care. No special-category data is processed.</p>
+
+    <h2>Who can see it?</h2>
+    <p>Records are stored as closed issues in a private GitHub repository. Access is limited to nominated partners and practice managers. Aggregated summaries (for example hours lost in a month) may be shared with the ICB. Individual sessions are not.</p>
+
+    <h2>How long is it kept?</h2>
+    <p>12 months from the session date, then deleted. The practice manager or IG lead reviews this on a rolling basis.</p>
+
+    <h2>Your rights</h2>
+    <p>You can request access, erasure, rectification, restriction, or object to processing. Because names are not stored, records are identified by date, time, site, and role. You can also contact the ICO: <a href="https://ico.org.uk">ico.org.uk</a> / 0303 123 1113.</p>
+
+    <h2>Free-text notes</h2>
+    <ul>
+      <li>Describe the IT problem only.</li>
+      <li>Do not include patient names, dates of birth, NHS numbers, or staff names.</li>
+      <li>The app and Worker block entries that look like an NHS number or contain the phrase “NHS number”.</li>
+    </ul>
+
+    <p class="lede" style="margin-top:2rem">The signed governance pack (DPIA and data-sharing agreement) lives in the repository <code>governance/</code> folder.</p>
+  </main>
+</body>
+</html>
