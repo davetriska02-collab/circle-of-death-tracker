@@ -1,4 +1,4 @@
-const CACHE = 'itslowness-v1.0.0';
+const CACHE = 'itslowness-v1.0.0-netfirst';
 const ASSETS = [
   './',
   './index.html',
@@ -32,33 +32,16 @@ self.addEventListener('fetch', event => {
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
 
-  const isConfig = url.pathname.endsWith('/config.json') || url.pathname.endsWith('config.json');
-
-  if (isConfig) {
-    event.respondWith(
-      fetch(request)
-        .then(response => {
-          if (response.ok) {
-            const copy = response.clone();
-            caches.open(CACHE).then(cache => cache.put(request, copy));
-          }
-          return response;
-        })
-        .catch(() => caches.match(request))
-    );
-    return;
-  }
-
+  // Network first so staff pick up app/config updates; cache is offline fallback only.
   event.respondWith(
-    caches.match(request).then(cached => {
-      if (cached) return cached;
-      return fetch(request).then(response => {
-        if (response.ok && response.type === 'basic') {
+    fetch(request)
+      .then(response => {
+        if (response.ok && (response.type === 'basic' || response.type === 'cors')) {
           const copy = response.clone();
           caches.open(CACHE).then(cache => cache.put(request, copy));
         }
         return response;
-      });
-    })
+      })
+      .catch(() => caches.match(request).then(cached => cached || caches.match('./index.html')))
   );
 });
